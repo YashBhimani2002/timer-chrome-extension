@@ -1,30 +1,43 @@
 {
-    "manifest_version":3,
-    "name":"Break Timer",
-    "description":"Break Timer",
-    "version":"1.0.0",
-    "action":{
-        "default_popup":"popup.html"
+    "manifest_version": 3,
+    "name": "Break Timer",
+    "description": "Break Timer",
+    "version": "1.0.0",
+    "action": {
+        "default_popup": "popup.html"
     },
-    "icons":{
-        "128":"assets/icons/icon-128.png",
-        "48":"assets/icons/icon-48.png",
-        "32":"assets/icons/icon-32.png",
-        "16":"assets/icons/icon-16.png"
+    "icons": {
+        "128": "assets/icons/icon-128.png",
+        "48": "assets/icons/icon-48.png",
+        "32": "assets/icons/icon-32.png",
+        "16": "assets/icons/icon-16.png"
     },
-    "permissions":[
+    "permissions": [
         "storage",
         "alarms",
         "notifications",
-        "contextMenus"
+        "contextMenus",
+        "tabs",
+        "debugger",
+        "activeTab",
+        "scripting"
     ],
-    "background":{
-        "service_worker":"background.js"
+    "background": {
+        "service_worker": "background.js"
     },
-    "content_scripts":[
+    "content_scripts": [
         {
-            "matches":["<all_urls>"],
-            "js":["content.js"]
+            "matches": [
+                "https://*/*",
+                "http://*/*"
+            ],
+            "js": [
+                "content.js"
+            ]
         }
+    ],
+    "host_permissions": [
+        "https://*/*",
+        "http://*/*"
     ]
 }

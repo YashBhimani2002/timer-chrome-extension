@@ -5,15 +5,16 @@ const Popup = () => {
         readTime: '00:00',
         breakTime: '00:00',
     })
-    const [status, setStatus] = React.useState("stop");
     const [time,setTime]=useState({
         hours:0,
         minutes:0,
         seconds:0
     })
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if(request.message=="timer"){
         console.log(request,"popup timer");
         setTime(request.data)
+        }
     })
     const getTimerDataFromLocalStorage = () => {
         chrome.runtime.sendMessage({ message: "get", data: timerValues }, (response) => {

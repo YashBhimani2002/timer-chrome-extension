@@ -25,7 +25,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           minutes = parseInt(request.data.readTime.split(":")[0]);
           seconds = parseInt(request.data.readTime.split(":")[1]);
         }
-        createTimerAlarm();
+        createTimerAlarm("timer");
       }
       sendResponse({ success: true, message: responseMessage });
     } else {
@@ -58,23 +58,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: false, message: "No timer data provided." });
       }
     });
-  } else if(request.message == "reset"){
+  } else if (request.message == "reset") {
     chrome.storage.local.clear();
     chrome.alarms.clear("timer");
     sendResponse({ success: true, message: "Time data cleared successfully." });
-  } else if(request.message == "resume"){
+  } else if (request.message == "resume") {
     chrome.storage.local.get("stopTimer", (result) => {
       if (result.stopTimer) {
         hours = result.stopTimer.hours;
         minutes = result.stopTimer.minutes;
         seconds = result.stopTimer.seconds;
-        createTimerAlarm();
-        sendResponse({ success: true, message: "Time data resumed successfully." });
+        createTimerAlarm("timer");
+        sendResponse({
+          success: true,
+          message: "Time data resumed successfully.",
+        });
       } else {
         sendResponse({ success: false, message: "No timer data provided." });
       }
     });
-  }else {
+  } else {
     sendResponse({ success: false, message: "Unknown message type." });
   }
   // Indicate that the response will be sent asynchronously
@@ -116,37 +119,170 @@ function updateTimerValuesLocally(
   chrome.storage.local.clear();
   storeTimerValuesLocally(timerValues, status);
 }
-function createTimerAlarm() {
-  chrome.alarms.create("timer", { periodInMinutes: 1 / 60 });
+function createTimerAlarm(alarm: string) {
+  chrome.alarms.create(alarm, { periodInMinutes: 1 / 60 });
 }
+
 chrome.alarms.onAlarm.addListener((alarms) => {
-  if (alarms.name == "timer") {
-    if (hours >= 0) {
-      if (seconds == 0 && minutes == 0 && hours == 0) {
-        chrome.alarms.clear("timer");
-      } else if (seconds == 0 && minutes == 0 && hours != 0) {
-        hours--;
-        minutes = 59;
-        seconds = 59;
-      } else if (seconds == 0 && minutes != 0) {
-        minutes--;
-        seconds = 59;
-      } else {
-        seconds--;
-      }
-    } else {
-      if (seconds == 0 && minutes == 0) {
-        chrome.alarms.clear("timer");
-      } else if (seconds == 0 && minutes != 0) {
-        minutes--;
-        seconds = 59;
-      } else {
-        seconds--;
-      }
-    }
-  }
-  chrome.runtime.sendMessage({
-    message: "timer",
-    data: { hours: hours, minutes: minutes, seconds: seconds },
-  });
-});
+   if (hours >= 0) {
+     if (seconds == 0 && minutes == 0 && hours == 0) {
+       chrome.alarms.clear(alarms.name);
+     } else if (seconds == 0 && minutes == 0 && hours != 0) {
+       hours--;
+       minutes = 59;
+       seconds = 59;
+     } else if (seconds == 0 && minutes != 0) {
+       minutes--;
+       seconds = 59;
+     } else {
+       seconds--;
+     }
+   } else {
+     if (seconds == 0 && minutes == 0) {
+       chrome.alarms.clear(alarms.name);
+     } else if (seconds == 0 && minutes != 0) {
+       minutes--;
+       seconds = 59;
+     } else {
+       seconds--;
+     }
+   }
+ 
+   if (alarms.name == "timer") {
+     chrome.runtime.sendMessage({
+       message: "timer",
+       data: { hours: hours, minutes: minutes, seconds: seconds },
+     });
+ 
+     if (hours == 0 && minutes == 0 && seconds == 0) {
+       chrome.alarms.clear(alarms.name);
+ 
+       // Start break timer if break time exists
+       chrome.storage.local.get("timeDetails", (result) => {
+         if (result.timeDetails) {
+           if (
+             result.timeDetails.breakTime.split(":")[0] != "00" ||
+             result.timeDetails.breakTime.split(":")[1] != "00" ||
+             result.timeDetails.breakTime.split(":")[2] != "00"
+           ) {
+             if (result.timeDetails.breakTime.split(":").length == 3) {
+               hours = parseInt(result.timeDetails.breakTime.split(":")[0]);
+               minutes = parseInt(result.timeDetails.breakTime.split(":")[1]);
+               seconds = parseInt(result.timeDetails.breakTime.split(":")[2]);
+             } else {
+               minutes = parseInt(result.timeDetails.breakTime.split(":")[0]);
+               seconds = parseInt(result.timeDetails.breakTime.split(":")[1]);
+             }
+             createTimerAlarm("breakTimer");
+           }
+         }
+       });
+     }
+   } else if (alarms.name == "breakTimer") {
+     // Handle break timer logic
+     if (hours == 0 && minutes == 0 && seconds == 0) {
+       // End break
+       chrome.tabs.query({}, (tabs) => {
+         tabs.forEach((tab) => {
+           chrome.scripting.executeScript({
+             target: { tabId: tab.id },
+             func: () => {
+               // Remove the modal
+               document.getElementById("breakModal")?.remove();
+             },
+           });
+         });
+       });
+ 
+       chrome.runtime.sendMessage({ action: "startBreakEnd" });
+       chrome.alarms.clear("breakTimer");
+     } else {
+       // Update break timer or start if not injected
+       chrome.tabs.query({}, (tabs) => {
+         tabs.forEach((tab) => {
+           chrome.scripting.executeScript({
+             target: { tabId: tab.id },
+             files: ["content.js"],
+           });
+         });
+       });
+ 
+       chrome.runtime.sendMessage({
+         action: "startBreak",
+         data: { hours: hours, minutes: minutes, seconds: seconds },
+       });
+     }
+   }
+ });
+ 
+
+
+// chrome.alarms.onAlarm.addListener((alarms) => {
+//   if (hours >= 0) {
+//     if (seconds == 0 && minutes == 0 && hours == 0) {
+//       chrome.alarms.clear(alarms.name);
+//     } else if (seconds == 0 && minutes == 0 && hours != 0) {
+//       hours--;
+//       minutes = 59;
+//       seconds = 59;
+//     } else if (seconds == 0 && minutes != 0) {
+//       minutes--;
+//       seconds = 59;
+//     } else {
+//       seconds--;
+//     }
+//   } else {
+//     if (seconds == 0 && minutes == 0) {
+//       chrome.alarms.clear(alarms.name);
+//     } else if (seconds == 0 && minutes != 0) {
+//       minutes--;
+//       seconds = 59;
+//     } else {
+//       seconds--;
+//     }
+//   }
+//   if (alarms.name == "timer") {
+//     chrome.runtime.sendMessage({
+//       message: "timer",
+//       data: { hours: hours, minutes: minutes, seconds: seconds },
+//     });
+//     if (hours == 0 && minutes == 0 && seconds == 0) {
+//       chrome.alarms.clear(alarms.name);
+//       chrome.storage.local.get("timeDetails", (result) => {
+//         if (result.timeDetails) {
+//           if (
+//             result.timeDetails.breakTime.split(":")[0] != "00" ||
+//             result.timeDetails.breakTime.split(":")[1] != "00" ||
+//             result.timeDetails.breakTime.split(":")[2] != "00"
+//           ) {
+//             if (result.timeDetails.breakTime.split(":").length == 3) {
+//               hours = parseInt(result.timeDetails.breakTime.split(":")[0]);
+//               minutes = parseInt(result.timeDetails.breakTime.split(":")[1]);
+//               seconds = parseInt(result.timeDetails.breakTime.split(":")[2]);
+//             } else {
+//               minutes = parseInt(result.timeDetails.breakTime.split(":")[0]);
+//               seconds = parseInt(result.timeDetails.breakTime.split(":")[1]);
+//             }
+//             createTimerAlarm("breakTimer");
+//           }
+//         }
+//       });
+//     }
+//   } else if (alarms.name == "breakTimer") {
+//     chrome.tabs.query({}, (tabs) => {
+//       tabs.forEach((tabs) => {
+//         chrome.scripting.executeScript({
+//           target: { tabId: tabs.id },
+//           files: ["content.js"],
+//         });
+//       });
+//     });
+//     chrome.runtime.sendMessage({
+//       action:
+//         hours == 0 && minutes == 0 && seconds == 0
+//           ? "startBreakEnd"
+//           : "startBreak",
+//       data: { hours: hours, minutes: minutes, seconds: seconds },
+//     });
+//   }
+// });
