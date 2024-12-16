@@ -62,7 +62,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.storage.local.clear();
     chrome.alarms.clear("timer");
     sendResponse({ success: true, message: "Time data cleared successfully." });
-  } else {
+  } else if(request.message == "resume"){
+    chrome.storage.local.get("stopTimer", (result) => {
+      if (result.stopTimer) {
+        hours = result.stopTimer.hours;
+        minutes = result.stopTimer.minutes;
+        seconds = result.stopTimer.seconds;
+        createTimerAlarm();
+        sendResponse({ success: true, message: "Time data resumed successfully." });
+      } else {
+        sendResponse({ success: false, message: "No timer data provided." });
+      }
+    });
+  }else {
     sendResponse({ success: false, message: "Unknown message type." });
   }
   // Indicate that the response will be sent asynchronously

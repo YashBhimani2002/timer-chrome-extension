@@ -58,7 +58,7 @@ const Popup = () => {
         <div className="bg-gray-800 w-52 h-full p-2">
             <div className="flex flex-1 mb-3 items-center">
                 <h2 className="flex-1 text-center text-white text-xl">Break Timer</h2>
-                <img src="../assets/resource/resetIcon.png" alt="reset" className="w-4 h-4 cursor-pointer" onClick={handleResetTimer} />
+                <img src="../assets/resource/resetIcon.png" alt="reset" className="w-4 h-4 cursor-pointer rounded-lg" onClick={handleResetTimer} />
             </div>
             <div className="flex flex-col justify-center items-center gap-2">
                 <div className="flex gap-2 w-full">
@@ -77,10 +77,10 @@ const Popup = () => {
                 </div>
             </div>
             <div className="flex gap-2 my-2">
-                <button className=" bg-green-500 rounded-md border-transparent border-[1px] shadow-md h-8 w-full" onClick={()=>handleStartTimer("start")}>Start</button>
+                <button className={`${time.hours==0&&time.minutes==0&&time.seconds==0?"bg-green-500 ":"bg-yellow-300 "}rounded-md border-transparent border-[1px] shadow-md h-8 w-full`} onClick={()=>handleStartTimer(time.hours==0&&time.minutes==0&&time.seconds==0?"start":"resume")}>{time.hours==0&&time.minutes==0&&time.seconds==0?"Start":"Resume"}</button>
                 <button className=" bg-red-500 rounded-md border-transparent border-[1px] shadow-md h-8 w-full" onClick={()=>handleStartTimer("stop")}>Stop</button>
             </div>
-            <div className="mt-4 text-white text-xl flex flex-1 w-full align-middle">{time.hours}:{time.minutes}:{time.seconds}</div>
+            <div className="mt-4 text-white text-xl flex flex-1 w-full justify-center">{time.hours<10?"0"+time.hours:time.hours}:{time.minutes<10?"0"+time.minutes:time.minutes}:{time.seconds<10?"0"+time.seconds:time.seconds}</div>
         </div>
     )
 }
