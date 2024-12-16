@@ -1,26 +1,86 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "../static/main.css";
 const Popup = () => {
+    const [timerValues, setTimerValues] = React.useState({
+        readTime: '00:00',
+        breakTime: '00:00',
+    })
+    const [status, setStatus] = React.useState("stop");
+    const [time,setTime]=useState({
+        hours:0,
+        minutes:0,
+        seconds:0
+    })
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        console.log(request,"popup timer");
+        setTime(request.data)
+    })
+    const getTimerDataFromLocalStorage = () => {
+        chrome.runtime.sendMessage({ message: "get", data: timerValues }, (response) => {
+            if(response.success===true){
+                setTimerValues(response.data);
+            }
+        });
+    }
+    const getStopTimerDataFromLocalStorage = () => {
+        chrome.runtime.sendMessage({ message: "getStop" }, (response) => {
+            if(response.success===true){
+               setTime(
+                response.data
+               )
+            }
+        });
+    }
+    useEffect(() => {
+        getTimerDataFromLocalStorage() 
+        getStopTimerDataFromLocalStorage()
+    },[])
+    const handleStartTimer = (message: string) => {
+        chrome.runtime.sendMessage({ message: message, data: timerValues }, (response) => {
+            console.log(response);
+        });
+    }
+    const handleResetTimer = () => {
+        chrome.runtime.sendMessage({ message: "reset" }, (response) => {
+            console.log(response);
+            setTime({
+                hours:0,
+                minutes:0,
+                seconds:0   
+            })
+            setTimerValues({
+                readTime: '00:00',
+                breakTime: '00:00',
+            })
+        });
+    }
     return (
-        <div className="bg-slate-400 rounded-md w-40 h-40">
-            <div className="flex flex-1">
-                <h4 className="flex-1 text-center">Break Timer</h4>
-                <img src={"../assets/resources/resetIcon.png"} alt="reset" className="w-4 h-4"/>
+        <div className="bg-gray-800 w-52 h-full p-2">
+            <div className="flex flex-1 mb-3 items-center">
+                <h2 className="flex-1 text-center text-white text-xl">Break Timer</h2>
+                <img src="../assets/resource/resetIcon.png" alt="reset" className="w-4 h-4 cursor-pointer" onClick={handleResetTimer} />
             </div>
-            <div>
-                <div>
-                    <input type="time" id="time" name="time" />
-                    <label >Read Time</label>
+            <div className="flex flex-col justify-center items-center gap-2">
+                <div className="flex gap-2 w-full">
+                    <label className="text-white font-mono flex-1 self-start ">Read Time: </label>
+                    <input type="time" id="readTime" name="readTime" value={timerValues.readTime} min="00:00" max="59:59" step="1" className="flex-1 self-start " onChange={(e) => {
+                        console.log(e.target.value, "start time");
+                        setTimerValues({ ...timerValues, readTime: e.target.value })
+                    }} />
                 </div>
-                <div>
-                    <input type="time" id="time" name="time" />
-                    <label >Break Time</label>
+                <div className="flex gap-2 w-full">
+                    <label className="text-white font-mono flex-1 self-start ">Break Time: </label>
+                    <input type="time" id="breakTime" name="breakTime" value={timerValues.breakTime}
+                        min="0:00" max="59:59" step="1" className="flex-1 self-start " onChange={(e) => {
+                            setTimerValues({ ...timerValues, breakTime: e.target.value })
+                        }} />
                 </div>
             </div>
-            <div>
-                <button>Start</button>
-                <button>Stop</button>
+            <div className="flex gap-2 my-2">
+                <button className=" bg-green-500 rounded-md border-transparent border-[1px] shadow-md h-8 w-full" onClick={()=>handleStartTimer("start")}>Start</button>
+                <button className=" bg-red-500 rounded-md border-transparent border-[1px] shadow-md h-8 w-full" onClick={()=>handleStartTimer("stop")}>Stop</button>
             </div>
+            <div className="mt-4 text-white text-xl flex flex-1 w-full align-middle">{time.hours}:{time.minutes}:{time.seconds}</div>
         </div>
     )
 }
