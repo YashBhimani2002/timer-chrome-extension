@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from "react";
 import "../static/main.css";
+/**
+ * The main component for the popup.
+ * 
+ * This component renders a popup which displays the current time, input fields
+ * for the read time and break time, buttons to start, stop and reset the timer.
+ * 
+ * It also handles the logic for starting, stopping and resetting the timer, and
+ * updating the stored timer values in local storage.
+ */
 const Popup = () => {
     const [timerValues, setTimerValues] = React.useState({
         readTime: '00:00',
@@ -16,6 +25,18 @@ const Popup = () => {
         setTime(request.data)
         }
     })
+    /**
+     * Retrieves the stored timer values from local storage and updates
+     * the component state with the stored values.
+     * 
+     * This function is used to retrieve the stored timer values from local
+     * storage when the popup is opened. It sends a message to the background
+     * script with the message type "get" and the component state as the
+     * payload. The background script then retrieves the stored values from
+     * local storage and sends them back to the popup in the response. If the
+     * response is successful, the component state is updated with the stored
+     * values.
+     */
     const getTimerDataFromLocalStorage = () => {
         chrome.runtime.sendMessage({ message: "get", data: timerValues }, (response) => {
             if(response.success===true){
@@ -23,6 +44,10 @@ const Popup = () => {
             }
         });
     }
+    /**
+     * Retrieves the stored stop timer values from local storage and updates
+     * the component state with the stored values.
+     */
     const getStopTimerDataFromLocalStorage = () => {
         chrome.runtime.sendMessage({ message: "getStop" }, (response) => {
             if(response.success===true){
@@ -36,11 +61,21 @@ const Popup = () => {
         getTimerDataFromLocalStorage() 
         getStopTimerDataFromLocalStorage()
     },[])
+    /**
+     * Sends a message to the background script to start or stop the timer based
+     * on the message parameter.
+     * @param {string} message - The message to be sent to the background script. Should be
+     * either "start" or "stop".
+     */
     const handleStartTimer = (message: string) => {
         chrome.runtime.sendMessage({ message: message, data: timerValues }, (response) => {
             console.log(response);
         });
     }
+    /**
+     * Resets the timer, break timer and the input fields in the popup
+     * to their initial state.
+     */
     const handleResetTimer = () => {
         chrome.runtime.sendMessage({ message: "reset" }, (response) => {
             console.log(response);

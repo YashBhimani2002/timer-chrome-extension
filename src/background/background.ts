@@ -1,7 +1,10 @@
 let hours = 0;
 let minutes = 0;
 let seconds = 0;
-
+let timeDetails = {
+  readTime: "00:00",
+  breakTime: "00:00",
+};
 // Listen for messages from content or popup scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   let responseMessage = "";
@@ -10,6 +13,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Handle different message types
   if (request.message === "start") {
     if (request.data) {
+      timeDetails = request.data;
       storeTimerValuesLocally(request.data, "running");
       responseMessage = "Time data stored successfully.";
       if (
@@ -45,6 +49,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.message === "get") {
     chrome.storage.local.get("timeDetails", (result) => {
       if (result.timeDetails) {
+        timeDetails = request.timeDetails;
         sendResponse({ success: true, data: result.timeDetails });
       } else {
         sendResponse({ success: false, message: "No timer data provided." });
@@ -122,6 +127,22 @@ function updateTimerValuesLocally(
 function createTimerAlarm(alarm: string) {
   chrome.alarms.create(alarm, { periodInMinutes: 1 / 60 });
 }
+
+function sendNotificationForFinishingTime(title: string, message: string) {
+  chrome.notifications.create({
+    type: "list",
+    iconUrl: "./icon.png",
+    title: title,
+    message,
+    items: [
+      {
+        title: title,
+        message: message,
+      },
+    ],
+  });
+}
+// Function to handle alarm events
 chrome.alarms.onAlarm.addListener((alarms) => {
   if (hours >= 0) {
     if (seconds == 0 && minutes == 0 && hours == 0) {
@@ -147,15 +168,42 @@ chrome.alarms.onAlarm.addListener((alarms) => {
     }
   }
 
+  // Send message to content scripts
   if (alarms.name == "timer") {
+    console.log(timeDetails);
+
     chrome.runtime.sendMessage({
       message: "timer",
       data: { hours: hours, minutes: minutes, seconds: seconds },
     });
 
+    //This is to send notification when read timer will be gone to be end.
+    if (timeDetails.readTime.split(":").length == 3) {
+      if (Number(timeDetails.readTime.split(":")[0]) > 0) {
+        if (minutes == 5 && seconds == 0) {
+          sendNotificationForFinishingTime(
+            "Read Time",
+            `Read Time Left 05:00 minute`
+          );
+        }
+      } else if (Number(timeDetails.readTime.split(":")[1]) > 0) {
+        if (seconds == 10) {
+          sendNotificationForFinishingTime(
+            "Read Time",
+            `Read Time Left 00:10 second`
+          );
+        }
+      } else if (Number(timeDetails.readTime.split(":")[2]) >= 25) {
+        if (seconds == 5) {
+          sendNotificationForFinishingTime(
+            "Read Time",
+            `Read Time Left 00:05 second`
+          );
+        }
+      }
+    }
     if (hours == 0 && minutes == 0 && seconds == 0) {
       chrome.alarms.clear(alarms.name);
-
       // Start break timer if break time exists
       chrome.storage.local.get("timeDetails", (result) => {
         if (result.timeDetails) {
@@ -180,6 +228,27 @@ chrome.alarms.onAlarm.addListener((alarms) => {
   } else if (alarms.name == "breakTimer") {
     // Handle break timer logic
     if (hours == 0 && minutes == 0 && seconds == 0) {
+      if (
+        timeDetails.readTime.split(":").length == 2 &&
+        (timeDetails.readTime.split(":")[0] != "00" ||
+          timeDetails.readTime.split(":")[1] != "00")
+      ) {
+        sendNotificationForFinishingTime(
+          "Break Time",
+          `Break Time Finished, You can start again`
+        );
+      } else if (
+        timeDetails.readTime.split(":").length == 3 &&
+        (timeDetails.readTime.split(":")[0] != "00" ||
+          timeDetails.readTime.split(":")[1] != "00" ||
+          timeDetails.readTime.split(":")[2] != "00")
+      ) {
+        sendNotificationForFinishingTime(
+          "Break Time",
+          `Break Time Finished, You can start again`
+        );
+      }
+
       // End break
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
@@ -224,7 +293,7 @@ chrome.alarms.onAlarm.addListener((alarms) => {
                   font-size: 24px;
                   pointer-events: all;
                   `
-                );                
+                );
                 modal.innerHTML = `
                 <body>
                   <div>
@@ -253,76 +322,3 @@ chrome.alarms.onAlarm.addListener((alarms) => {
     }
   }
 });
-
- 
-
-
-// chrome.alarms.onAlarm.addListener((alarms) => {
-//   if (hours >= 0) {
-//     if (seconds == 0 && minutes == 0 && hours == 0) {
-//       chrome.alarms.clear(alarms.name);
-//     } else if (seconds == 0 && minutes == 0 && hours != 0) {
-//       hours--;
-//       minutes = 59;
-//       seconds = 59;
-//     } else if (seconds == 0 && minutes != 0) {
-//       minutes--;
-//       seconds = 59;
-//     } else {
-//       seconds--;
-//     }
-//   } else {
-//     if (seconds == 0 && minutes == 0) {
-//       chrome.alarms.clear(alarms.name);
-//     } else if (seconds == 0 && minutes != 0) {
-//       minutes--;
-//       seconds = 59;
-//     } else {
-//       seconds--;
-//     }
-//   }
-//   if (alarms.name == "timer") {
-//     chrome.runtime.sendMessage({
-//       message: "timer",
-//       data: { hours: hours, minutes: minutes, seconds: seconds },
-//     });
-//     if (hours == 0 && minutes == 0 && seconds == 0) {
-//       chrome.alarms.clear(alarms.name);
-//       chrome.storage.local.get("timeDetails", (result) => {
-//         if (result.timeDetails) {
-//           if (
-//             result.timeDetails.breakTime.split(":")[0] != "00" ||
-//             result.timeDetails.breakTime.split(":")[1] != "00" ||
-//             result.timeDetails.breakTime.split(":")[2] != "00"
-//           ) {
-//             if (result.timeDetails.breakTime.split(":").length == 3) {
-//               hours = parseInt(result.timeDetails.breakTime.split(":")[0]);
-//               minutes = parseInt(result.timeDetails.breakTime.split(":")[1]);
-//               seconds = parseInt(result.timeDetails.breakTime.split(":")[2]);
-//             } else {
-//               minutes = parseInt(result.timeDetails.breakTime.split(":")[0]);
-//               seconds = parseInt(result.timeDetails.breakTime.split(":")[1]);
-//             }
-//             createTimerAlarm("breakTimer");
-//           }
-//         }
-//       });
-//     }
-//   } else if (alarms.name == "breakTimer") {
-//     chrome.tabs.query({}, (tabs) => {
-//       tabs.forEach((tabs) => {
-//         chrome.scripting.executeScript({
-//           target: { tabId: tabs.id },
-//           files: ["content.js"],
-//         });
-//       });
-//     });
-//     chrome.runtime.sendMessage({
-//       action:
-//         hours == 0 && minutes == 0 && seconds == 0
-//           ? "startBreakEnd"
-//           : "startBreak",
-//       data: { hours: hours, minutes: minutes, seconds: seconds },
-//     });
-//   }
-// });
