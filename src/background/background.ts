@@ -298,7 +298,7 @@ chrome.alarms.onAlarm.addListener((alarms) => {
                 <body>
                   <div>
                     <h1>Break Time!</h1>
-                    <p>Relax for a while. This will end in <span id="breakTimer"></span> seconds.</p>
+                    <p>Relax for a while. This will end in <span id="breakTimer"></span> time.</p>
                   </div>
                 </body>
                 `;
@@ -307,7 +307,7 @@ chrome.alarms.onAlarm.addListener((alarms) => {
 
               const timerElement = document.getElementById("breakTimer");
               if (timerElement) {
-                timerElement.textContent = `${timeData.hours}:${timeData.minutes}:${timeData.seconds}`;
+                timerElement.textContent = `${timeData.hours<10?"0"+timeData.hours:timeData.hours}:${timeData.minutes<10?"0"+timeData.minutes:timeData.minutes}:${timeData.seconds<10?"0"+timeData.seconds:timeData.seconds}`;
               }
             },
             args: [{ hours, minutes, seconds }],
