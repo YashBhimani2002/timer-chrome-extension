@@ -124,10 +124,19 @@ function updateTimerValuesLocally(
   chrome.storage.local.clear();
   storeTimerValuesLocally(timerValues, status);
 }
+/**
+ * Creates a chrome alarm with the given name and sets it to trigger every second.
+ * @param {string} alarm - The name of the alarm to be created.
+ */
 function createTimerAlarm(alarm: string) {
   chrome.alarms.create(alarm, { periodInMinutes: 1 / 60 });
 }
 
+/**
+ * Sends a notification to the user with a given title and message.
+ * @param {string} title - The title of the notification
+ * @param {string} message - The message to be displayed in the notification
+ */
 function sendNotificationForFinishingTime(title: string, message: string) {
   chrome.notifications.create({
     type: "list",
@@ -307,7 +316,17 @@ chrome.alarms.onAlarm.addListener((alarms) => {
 
               const timerElement = document.getElementById("breakTimer");
               if (timerElement) {
-                timerElement.textContent = `${timeData.hours<10?"0"+timeData.hours:timeData.hours}:${timeData.minutes<10?"0"+timeData.minutes:timeData.minutes}:${timeData.seconds<10?"0"+timeData.seconds:timeData.seconds}`;
+                timerElement.textContent = `${
+                  timeData.hours < 10 ? "0" + timeData.hours : timeData.hours
+                }:${
+                  timeData.minutes < 10
+                    ? "0" + timeData.minutes
+                    : timeData.minutes
+                }:${
+                  timeData.seconds < 10
+                    ? "0" + timeData.seconds
+                    : timeData.seconds
+                }`;
               }
             },
             args: [{ hours, minutes, seconds }],
