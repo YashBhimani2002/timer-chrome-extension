@@ -257,87 +257,30 @@ chrome.alarms.onAlarm.addListener((alarms) => {
           `Break Time Finished, You can start again`
         );
       }
-
-      // End break
-      chrome.tabs.query({}, (tabs) => {
-        tabs.forEach((tab) => {
-          chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: () => {
-              // Remove the modal
-              document.getElementById("breakModal")?.remove();
-            },
-          });
-        });
-      });
-
-      chrome.runtime.sendMessage({ action: "startBreakEnd" });
       chrome.alarms.clear("breakTimer");
-    } else {
-      // Update break timer or start if not injected
-      chrome.tabs.query({}, (tabs) => {
-        tabs.forEach((tab) => {
-          chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: (timeData) => {
-              let modal = document.getElementById("breakModal");
-
-              if (!modal) {
-                modal = document.createElement("div");
-                modal.id = "breakModal";
-                modal.setAttribute(
-                  "style",
-                  `
-                  position: fixed;
-                  top: 0;
-                  left: 0;
-                  width: 100vw;
-                  height: 100vh;
-                  background-color: rgba(0, 0, 0, 0.8);
-                  color: white;
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  z-index: 999999;
-                  font-size: 24px;
-                  pointer-events: all;
-                  `
-                );
-                modal.innerHTML = `
-                <body>
-                  <div>
-                    <h1>Break Time!</h1>
-                    <p>Relax for a while. This will end in <span id="breakTimer"></span> time.</p>
-                  </div>
-                </body>
-                `;
-                document.body.appendChild(modal);
-              }
-
-              const timerElement = document.getElementById("breakTimer");
-              if (timerElement) {
-                timerElement.textContent = `${
-                  timeData.hours < 10 ? "0" + timeData.hours : timeData.hours
-                }:${
-                  timeData.minutes < 10
-                    ? "0" + timeData.minutes
-                    : timeData.minutes
-                }:${
-                  timeData.seconds < 10
-                    ? "0" + timeData.seconds
-                    : timeData.seconds
-                }`;
-              }
-            },
-            args: [{ hours, minutes, seconds }],
-          });
-        });
-      });
-
-      chrome.runtime.sendMessage({
-        action: "startBreak",
-        data: { hours: hours, minutes: minutes, seconds: seconds },
-      });
     }
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach((tab) => {
+        chrome.scripting.executeScript(
+          {
+            target: { tabId: tab.id },
+            files: ["content.js"],
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              return;
+            }
+            // Send message only after successful injection
+            chrome.tabs.sendMessage(tab.id, {
+              action:
+                hours == 0 && minutes == 0 && seconds == 0
+                  ? "startBreakEnd"
+                  : "startBreak",
+              data: { hours: hours, minutes: minutes, seconds: seconds },
+            });
+          }
+        );
+      });
+    });
   }
 });

@@ -39,7 +39,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           <h1>Break Time!</h1>
           <p>Relax for a while. This will end in <span id="breakTimer"></span> seconds.</p>
         </div>
-        </body>
+      </body>
       `;
       document.body.appendChild(modal);
     }
