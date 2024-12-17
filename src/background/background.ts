@@ -196,7 +196,7 @@ chrome.alarms.onAlarm.addListener((alarms) => {
           );
         }
       } else if (Number(timeDetails.readTime.split(":")[1]) > 0) {
-        if (seconds == 10) {
+        if (seconds == 10 && minutes<=0) {
           sendNotificationForFinishingTime(
             "Read Time",
             `Read Time Left 00:10 second`
